@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::WindowMode};
+use bevy::{prelude::*, window::{WindowMode, WindowResolution}};
 use rand::Rng;
 
 const EXTENTS: Vec3 = Vec3::new(1920., 1080., 0.);
@@ -7,7 +7,7 @@ const BALL_SPEED: f32 = 250.;
 const PLAYER_WIDTH: f32 = 20.;
 const PLAYER_HEIGHT: f32 = 160.;
 const PLAYER_DIST: f32 = 800.;
-const PLAYER_SPEED: f32 = 250.;
+const PLAYER_SPEED: f32 = 275.;
 
 #[derive(Component)]
 struct Player{
@@ -31,6 +31,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
+                resolution: WindowResolution::new(EXTENTS.x, EXTENTS.y).with_scale_factor_override(1.0),
                 resizable: false,
                 mode: WindowMode::BorderlessFullscreen(MonitorSelection::Primary),
                 ..default() }),
