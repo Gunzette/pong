@@ -91,7 +91,8 @@ fn ball_setup(
 fn player_movement(
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&Player, &mut Transform)>
+    mut query: Query<(&Player, &mut Transform)>,
+    mut app_exit: ResMut<Events<bevy::app::AppExit>>
 ) {
     for player_bundle in &mut query {
         let (player, mut transform) = player_bundle;
@@ -113,6 +114,10 @@ fn player_movement(
         let bounds = Vec3::from(EXTENTS * 0.5);
 
         transform.translation = transform.translation.min(bounds - 0.5*PLAYER_HEIGHT*Vec3::Y).max(-bounds + 0.5*PLAYER_HEIGHT*Vec3::Y);
+    }
+
+    if keyboard_input.pressed(KeyCode::Escape) {
+        app_exit.send(bevy::app::AppExit::Success);
     }
 }
 
