@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::{WindowMode, WindowResolution}};
+use bevy::{prelude::*, window::{WindowMode, WindowResolution}, sprite::Anchor};
 use rand::Rng;
 
 const EXTENTS: Vec3 = Vec3::new(1920., 1080., 0.);
@@ -22,6 +22,9 @@ struct Ball{
     velo: Vec3
 }
 
+#[derive(Component)]
+struct CurrentScore;
+
 #[derive(Event)]
 struct Goal {
     player: bool
@@ -38,6 +41,7 @@ fn main() {
             ..default()
         }))
         .insert_resource(Time::<Fixed>::from_hz(60.0))
+        .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .add_systems(Startup, (game_setup, ball_setup).chain())
         .add_systems(FixedUpdate, (player_movement, ball_movement, collision_checker).chain())
         .add_observer(on_goal)
@@ -73,6 +77,28 @@ fn game_setup(
         Mesh2d(meshes.add(Rectangle::new(PLAYER_WIDTH, PLAYER_HEIGHT))),
         MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
         Transform::from_xyz(PLAYER_DIST, 0., 0.)
+    ));
+
+    // Current Score Display
+    commands.spawn((
+        CurrentScore,
+        Text2d::new("0 : 0"),
+        TextFont {font_size: 72.0, ..default()},
+        TextLayout::new_with_justify(JustifyText::Center),
+        //TODO
+        Anchor::Center,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(500.0),
+            ..default()
+        }
+    ));
+
+    // Middle line
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(10.0, EXTENTS.y))),
+        MeshMaterial2d(materials.add(Color::srgba(1.0, 1., 1., 0.05))),
+        Transform::from_xyz(0.0, 0.0, 0.0)
     ));
 }
 
@@ -148,8 +174,8 @@ fn collision_checker(
     let (mut ball_ent, ball_transform) = ball.into_inner();
     //let ball_abs = ball_transform.translation.abs();
     for player in players.iter() {
-        let x_cond = ((player.translation.x - ball_transform.translation.x).abs() < 0.5*(BALL_SIZE+PLAYER_WIDTH));
-        let y_cond = ((player.translation.y - ball_transform.translation.y).abs() < 0.5*(BALL_SIZE+PLAYER_HEIGHT));
+        let x_cond = (player.translation.x - ball_transform.translation.x).abs() < 0.5*(BALL_SIZE+PLAYER_WIDTH);
+        let y_cond = (player.translation.y - ball_transform.translation.y).abs() < 0.5*(BALL_SIZE+PLAYER_HEIGHT);
         if x_cond && y_cond {
             ball_ent.velo.x *= -1.;
             ball_ent.velo.x += ball_ent.velo.x.signum() * 10.;
@@ -160,7 +186,8 @@ fn collision_checker(
 fn on_goal(
     trigger: Trigger<Goal>,
     mut players: Query<&mut Player>,
-    ball: Single<(&mut Ball, &mut Transform)>
+    ball: Single<(&mut Ball, &mut Transform)>,
+    scores: Single<&mut Text2d, With<CurrentScore>>
 ) {
     // Ball logic
     let (mut ball_ent, mut ball_transform) = ball.into_inner();
@@ -169,11 +196,19 @@ fn on_goal(
     ball_ent.velo.x = BALL_SPEED * if rng.random_bool(0.5) {1.0} else {-1.0};
     ball_ent.velo.y = BALL_SPEED * if rng.random_bool(0.5) {1.0} else {-1.0};
 
+    let mut string = ":".to_string();
+
     // Player logic
     for mut player in &mut players {
         if player.num == trigger.player {
             player.score += 1;
         }
-        println!("Player {}: {}", player.num as i8, player.score);
+        // Appends the Scores to the Score display
+        if player.num {
+            string = format!("{string} {}", player.score);
+        } else {
+            string = format!("{} {string}", player.score);
+        }
     }
+    scores.into_inner().0 = string;
 }
